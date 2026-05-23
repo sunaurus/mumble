@@ -562,6 +562,20 @@ int main(int argc, char **argv) {
 	} else {
 		Global::get().s.load(settingsFile);
 	}
+
+	// One-shot: seed the recommended per-context panning defaults for users who have never
+	// run Mumble before. Existing users (including those upgrading from upstream Mumble, where
+	// audioWizardShown is already true) keep centred audio until they opt into the feature via
+	// the Audio Output settings. Flipping bPanningDefaultsSeeded ensures we never re-seed.
+	if (!Global::get().s.bPanningDefaultsSeeded) {
+		if (!Global::get().s.audioWizardShown) {
+			Global::get().s.fPanVoice   = 1.0f;
+			Global::get().s.fPanWhisper = -1.0f;
+			Global::get().s.fPanShout   = 0.0f;
+		}
+		Global::get().s.bPanningDefaultsSeeded = true;
+	}
+
 	if (!Global::get().migratedDBPath.isEmpty()) {
 		// We have migrated the DB to a new location. Make sure that the settings hold the correct (new) path and that
 		// this path is written to disk immediately in order to minimize the risk of losing this information due to a

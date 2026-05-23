@@ -76,6 +76,12 @@ const SettingsKey CUE_VOLUME_KEY                              = { "cue_volume" }
 const SettingsKey RESTRICT_WHISPERS_TO_FRIENDS_KEY            = { "restrict_whispers_to_friends" };
 const SettingsKey NOTIFICATION_USER_LIMIT_KEY                 = { "notification_user_limit" };
 
+// Per-context incoming-audio panning
+const SettingsKey PAN_VOICE_KEY               = { "pan_voice" };
+const SettingsKey PAN_WHISPER_KEY             = { "pan_whisper" };
+const SettingsKey PAN_SHOUT_KEY               = { "pan_shout" };
+const SettingsKey PANNING_DEFAULTS_SEEDED_KEY = { "panning_defaults_seeded" };
+
 // Idle settings
 const SettingsKey IDLE_TIME_KEY                  = { "idle_time" };
 const SettingsKey IDLE_ACTION_KEY                = { "idle_action" };

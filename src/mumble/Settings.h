@@ -340,6 +340,16 @@ struct Settings {
 	float fAudioMaxDistance       = 15.0f;
 	float fAudioMaxDistVolume     = 0.0f;
 	float fAudioBloom             = 0.5f;
+
+	// Per-context incoming-audio panning.
+	// Range [-1.0, +1.0]: -1.0 = fully left ear, 0.0 = centred, +1.0 = fully right ear.
+	// Defaults are 0.0 (centred) so that users upgrading from upstream Mumble keep
+	// centred audio. The recommended non-zero defaults are seeded on first run via
+	// bPanningDefaultsSeeded (see main.cpp).
+	float fPanVoice            = 0.0f;
+	float fPanWhisper          = 0.0f;
+	float fPanShout            = 0.0f;
+	bool bPanningDefaultsSeeded = false;
 	/// Contains the settings for each individual plugin. The key in this map is the Hex-represented SHA-1
 	/// hash of the plugin's UTF-8 encoded absolute file-path on the hard-drive.
 	QHash< QString, PluginSetting > qhPluginSettings = {};

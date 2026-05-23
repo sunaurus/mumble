@@ -19,6 +19,7 @@
 #include "VoiceRecorder.h"
 #include "Global.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 
@@ -643,6 +644,39 @@ bool AudioOutput::mix(void *outbuff, unsigned int frameCount) {
 				}
 			}
 
+			// Per-context incoming-audio panning. Applied only to user speech (not sample playback),
+			// after the recording branch so that recordings capture the un-panned source PCM.
+			// Equal-power pan factor is distributed across the actual speaker layout via fSpeakers[s].x.
+			static std::vector< float > panFactor;
+			panFactor.assign(iChannels, 1.0f);
+			if (speech) {
+				float pan = 0.0f;
+				switch (speech->m_audioContext) {
+					case Mumble::Protocol::AudioContext::WHISPER:
+						pan = Global::get().s.fPanWhisper;
+						break;
+					case Mumble::Protocol::AudioContext::SHOUT:
+						pan = Global::get().s.fPanShout;
+						break;
+					default:
+						// NORMAL, LISTEN and INVALID all use the voice pan.
+						pan = Global::get().s.fPanVoice;
+						break;
+				}
+				pan = std::max(-1.0f, std::min(1.0f, pan));
+				if (pan != 0.0f) {
+					const float theta = (pan + 1.0f) * (static_cast< float >(M_PI) / 4.0f);
+					const float gainL = std::cos(theta);
+					const float gainR = std::sin(theta);
+					for (unsigned int s = 0; s < iChannels; ++s) {
+						const float x         = fSpeakers[s * 3 + 0];
+						const float leftness  = (1.0f - x) * 0.5f;
+						const float rightness = (1.0f + x) * 0.5f;
+						panFactor[s]          = gainL * leftness + gainR * rightness;
+					}
+				}
+			}
+
 			if (validListener
 				&& ((buffer->fPos[0] != 0.0f) || (buffer->fPos[1] != 0.0f) || (buffer->fPos[2] != 0.0f))) {
 				// Add position to position map
@@ -694,7 +728,7 @@ bool AudioOutput::mix(void *outbuff, unsigned int frameCount) {
 					float channelVol;
 					if (isAudible) {
 						// In the current contex, we know that sound reaches at least one ear.
-						channelVol = svol[s] * calcGain(dot, len) * volumeAdjustment;
+						channelVol = svol[s] * calcGain(dot, len) * volumeAdjustment * panFactor[s];
 					} else {
 						// The user has set the minimum positional volume to 0 and this sound source
 						// is exceeding the positional volume range. This means that the sound is completely
@@ -747,7 +781,7 @@ bool AudioOutput::mix(void *outbuff, unsigned int frameCount) {
 				// Mix the current audio source into the output by adding it to the elements of the output buffer after
 				// having applied a volume adjustment
 				for (unsigned int s = 0; s < nchan; ++s) {
-					const float channelVol = svol[s] * volumeAdjustment;
+					const float channelVol = svol[s] * volumeAdjustment * panFactor[s];
 					float *RESTRICT o      = output + s;
 					if (buffer->bStereo) {
 						// Linear-panning stereo stream according to the projection of fSpeaker vector on left-right

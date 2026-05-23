@@ -67,6 +67,13 @@
 	PROCESS(idle, UNDO_IDLE_ACTION_UPON_ACTIVITY, bUndoIdleActionUponActivity)
 
 
+#define PANNING_SETTINGS                                                    \
+	PROCESS(panning, PAN_VOICE_KEY, fPanVoice)                              \
+	PROCESS(panning, PAN_WHISPER_KEY, fPanWhisper)                          \
+	PROCESS(panning, PAN_SHOUT_KEY, fPanShout)                              \
+	PROCESS(panning, PANNING_DEFAULTS_SEEDED_KEY, bPanningDefaultsSeeded)
+
+
 #define POSITIONAL_AUDIO_SETTINGS                                                  \
 	PROCESS(positional_audio, ENABLE_POSITIONAL_AUDIO_KEY, bPositionalAudio)       \
 	PROCESS(positional_audio, POSITIONAL_MIN_DISTANCE_KEY, fAudioMinDistance)      \
@@ -320,6 +327,7 @@
 	MISC_SETTINGS              \
 	AUDIO_SETTINGS             \
 	IDLE_SETTINGS              \
+	PANNING_SETTINGS           \
 	POSITIONAL_AUDIO_SETTINGS  \
 	NETWORK_SETTINGS           \
 	AUDIO_BACKEND_SETTINGS     \
@@ -349,6 +357,8 @@
 	AUDIO_SETTINGS                                       \
 	INTERMEDIATE_OPERATION                               \
 	IDLE_SETTINGS                                        \
+	INTERMEDIATE_OPERATION                               \
+	PANNING_SETTINGS                                     \
 	INTERMEDIATE_OPERATION                               \
 	POSITIONAL_AUDIO_SETTINGS                            \
 	INTERMEDIATE_OPERATION                               \

@@ -16,6 +16,7 @@
 
 #include <QSignalBlocker>
 
+#include <cmath>
 #include <cstdint>
 
 const QString AudioOutputDialog::name = QLatin1String("AudioOutputWidget");
@@ -739,6 +740,13 @@ void AudioOutputDialog::load(const Settings &r) {
 	loadCheckBox(qcbHeadphones, r.bPositionalHeadphone);
 	loadCheckBox(qcbPositional, r.bPositionalAudio);
 
+	loadSlider(qsPanVoice, static_cast< int >(std::lround(r.fPanVoice * 100.0f)));
+	loadSlider(qsPanWhisper, static_cast< int >(std::lround(r.fPanWhisper * 100.0f)));
+	loadSlider(qsPanShout, static_cast< int >(std::lround(r.fPanShout * 100.0f)));
+	on_qsPanVoice_valueChanged(qsPanVoice->value());
+	on_qsPanWhisper_valueChanged(qsPanWhisper->value());
+	on_qsPanShout_valueChanged(qsPanShout->value());
+
 	qsOtherVolume->setEnabled(r.bAttenuateOthersOnTalk || r.bAttenuateOthers);
 	qlOtherVolume->setEnabled(r.bAttenuateOthersOnTalk || r.bAttenuateOthers);
 	qcbAttenuateLoopbacks->setEnabled(r.bOnlyAttenuateSameOutput);
@@ -765,6 +773,10 @@ void AudioOutputDialog::save() const {
 	s.bPositionalAudio               = qcbPositional->isChecked();
 	s.bPositionalHeadphone           = qcbHeadphones->isChecked();
 	s.bExclusiveOutput               = qcbExclusive->isChecked();
+
+	s.fPanVoice   = static_cast< float >(qsPanVoice->value()) / 100.0f;
+	s.fPanWhisper = static_cast< float >(qsPanWhisper->value()) / 100.0f;
+	s.fPanShout   = static_cast< float >(qsPanShout->value()) / 100.0f;
 
 
 	if (AudioOutputRegistrar::qmNew) {
@@ -939,4 +951,44 @@ void AudioOutputDialog::on_qcbAttenuateOthers_clicked(bool checked) {
 
 void AudioOutputDialog::on_qcbOnlyAttenuateSameOutput_clicked(bool checked) {
 	qcbAttenuateLoopbacks->setEnabled(checked);
+}
+
+namespace {
+// Format a pan slider value as "L 73", "C", or "R 25" for display next to the slider.
+QString formatPanLabel(int v) {
+	if (v == 0) {
+		return AudioOutputDialog::tr("C");
+	}
+	if (v < 0) {
+		return AudioOutputDialog::tr("L %1").arg(-v);
+	}
+	return AudioOutputDialog::tr("R %1").arg(v);
+}
+} // namespace
+
+void AudioOutputDialog::on_qsPanVoice_valueChanged(int v) {
+	qlPanVoiceValue->setText(formatPanLabel(v));
+	Mumble::Accessibility::setSliderSemanticValue(qsPanVoice, formatPanLabel(v));
+}
+
+void AudioOutputDialog::on_qsPanWhisper_valueChanged(int v) {
+	qlPanWhisperValue->setText(formatPanLabel(v));
+	Mumble::Accessibility::setSliderSemanticValue(qsPanWhisper, formatPanLabel(v));
+}
+
+void AudioOutputDialog::on_qsPanShout_valueChanged(int v) {
+	qlPanShoutValue->setText(formatPanLabel(v));
+	Mumble::Accessibility::setSliderSemanticValue(qsPanShout, formatPanLabel(v));
+}
+
+void AudioOutputDialog::on_qpbPanVoiceReset_clicked() {
+	qsPanVoice->setValue(0);
+}
+
+void AudioOutputDialog::on_qpbPanWhisperReset_clicked() {
+	qsPanWhisper->setValue(0);
+}
+
+void AudioOutputDialog::on_qpbPanShoutReset_clicked() {
+	qsPanShout->setValue(0);
 }

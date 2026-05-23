@@ -107,6 +107,13 @@ public slots:
 	void on_qcbAttenuateOthersOnTalk_clicked(bool checked);
 	void on_qcbAttenuateOthers_clicked(bool checked);
 	void on_qcbOnlyAttenuateSameOutput_clicked(bool checked);
+
+	void on_qsPanVoice_valueChanged(int v);
+	void on_qsPanWhisper_valueChanged(int v);
+	void on_qsPanShout_valueChanged(int v);
+	void on_qpbPanVoiceReset_clicked();
+	void on_qpbPanWhisperReset_clicked();
+	void on_qpbPanShoutReset_clicked();
 };
 
 #endif

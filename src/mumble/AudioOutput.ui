@@ -617,6 +617,204 @@
     </widget>
    </item>
    <item>
+    <widget class="QGroupBox" name="qgbPanning">
+     <property name="toolTip">
+      <string>L/R panning applied to incoming audio.</string>
+     </property>
+     <property name="whatsThis">
+      <string>&lt;b&gt;Panning (L/R).&lt;/b&gt;&lt;br /&gt;Independently routes Voice, Whisper, and Shout audio to the left or right ear. Recordings always capture the un-panned source audio.</string>
+     </property>
+     <property name="title">
+      <string>Panning (L/R)</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayoutPanning">
+      <item row="0" column="0">
+       <widget class="QLabel" name="qlPanVoice">
+        <property name="text">
+         <string>Voice</string>
+        </property>
+        <property name="buddy">
+         <cstring>qsPanVoice</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="SemanticSlider" name="qsPanVoice">
+        <property name="toolTip">
+         <string>L/R balance for normal speech and listener-proxied audio.</string>
+        </property>
+        <property name="accessibleName">
+         <string>Voice pan</string>
+        </property>
+        <property name="minimum">
+         <number>-100</number>
+        </property>
+        <property name="maximum">
+         <number>100</number>
+        </property>
+        <property name="pageStep">
+         <number>25</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="tickPosition">
+         <enum>QSlider::TicksBelow</enum>
+        </property>
+        <property name="tickInterval">
+         <number>25</number>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QLabel" name="qlPanVoiceValue">
+        <property name="minimumSize">
+         <size>
+          <width>70</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="text">
+         <string notr="true">C</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="3">
+       <widget class="QPushButton" name="qpbPanVoiceReset">
+        <property name="toolTip">
+         <string>Reset to centre</string>
+        </property>
+        <property name="text">
+         <string>Reset</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="qlPanWhisper">
+        <property name="text">
+         <string>Whisper</string>
+        </property>
+        <property name="buddy">
+         <cstring>qsPanWhisper</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="SemanticSlider" name="qsPanWhisper">
+        <property name="toolTip">
+         <string>L/R balance for whispers received privately by you.</string>
+        </property>
+        <property name="accessibleName">
+         <string>Whisper pan</string>
+        </property>
+        <property name="minimum">
+         <number>-100</number>
+        </property>
+        <property name="maximum">
+         <number>100</number>
+        </property>
+        <property name="pageStep">
+         <number>25</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="tickPosition">
+         <enum>QSlider::TicksBelow</enum>
+        </property>
+        <property name="tickInterval">
+         <number>25</number>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QLabel" name="qlPanWhisperValue">
+        <property name="minimumSize">
+         <size>
+          <width>70</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="text">
+         <string notr="true">C</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="3">
+       <widget class="QPushButton" name="qpbPanWhisperReset">
+        <property name="toolTip">
+         <string>Reset to centre</string>
+        </property>
+        <property name="text">
+         <string>Reset</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="qlPanShout">
+        <property name="text">
+         <string>Shout</string>
+        </property>
+        <property name="buddy">
+         <cstring>qsPanShout</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="SemanticSlider" name="qsPanShout">
+        <property name="toolTip">
+         <string>L/R balance for shouts received as a channel broadcast.</string>
+        </property>
+        <property name="accessibleName">
+         <string>Shout pan</string>
+        </property>
+        <property name="minimum">
+         <number>-100</number>
+        </property>
+        <property name="maximum">
+         <number>100</number>
+        </property>
+        <property name="pageStep">
+         <number>25</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="tickPosition">
+         <enum>QSlider::TicksBelow</enum>
+        </property>
+        <property name="tickInterval">
+         <number>25</number>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="2">
+       <widget class="QLabel" name="qlPanShoutValue">
+        <property name="minimumSize">
+         <size>
+          <width>70</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="text">
+         <string notr="true">C</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="3">
+       <widget class="QPushButton" name="qpbPanShoutReset">
+        <property name="toolTip">
+         <string>Reset to centre</string>
+        </property>
+        <property name="text">
+         <string>Reset</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
     <widget class="QGroupBox" name="qgbLoopback">
      <property name="title">
       <string>Loopback Test</string>
@@ -791,6 +989,12 @@
   <tabstop>qsbMinimumVolume</tabstop>
   <tabstop>qsBloom</tabstop>
   <tabstop>qsbBloom</tabstop>
+  <tabstop>qsPanVoice</tabstop>
+  <tabstop>qpbPanVoiceReset</tabstop>
+  <tabstop>qsPanWhisper</tabstop>
+  <tabstop>qpbPanWhisperReset</tabstop>
+  <tabstop>qsPanShout</tabstop>
+  <tabstop>qpbPanShoutReset</tabstop>
   <tabstop>qcbLoopback</tabstop>
   <tabstop>qsPacketDelay</tabstop>
   <tabstop>qsPacketLoss</tabstop>
