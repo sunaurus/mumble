@@ -489,6 +489,15 @@ bool AudioOutput::mix(void *outbuff, unsigned int frameCount) {
 
 		bool validListener = false;
 
+		// Track which context groups (voice / whisper / shout) have at least one active
+		// speaker in this mix block. Used below to gate the radio-static streams: we emit
+		// one static stream per distinct pan value across the active contexts, so the
+		// static respects per-context panning instead of flooding both ears regardless of
+		// which channel was keyed.
+		bool contextActiveVoice   = false;
+		bool contextActiveWhisper = false;
+		bool contextActiveShout   = false;
+
 		// Initialize recorder if recording is enabled
 		boost::shared_array< float > recbuff;
 		if (recorder) {
@@ -654,14 +663,17 @@ bool AudioOutput::mix(void *outbuff, unsigned int frameCount) {
 				float pan = 0.0f;
 				switch (speech->m_audioContext) {
 					case Mumble::Protocol::AudioContext::WHISPER:
-						pan = Global::get().s.fPanWhisper;
+						pan                  = Global::get().s.fPanWhisper;
+						contextActiveWhisper = true;
 						break;
 					case Mumble::Protocol::AudioContext::SHOUT:
-						pan = Global::get().s.fPanShout;
+						pan                = Global::get().s.fPanShout;
+						contextActiveShout = true;
 						break;
 					default:
 						// NORMAL, LISTEN and INVALID all use the voice pan.
-						pan = Global::get().s.fPanVoice;
+						pan                = Global::get().s.fPanVoice;
+						contextActiveVoice = true;
 						break;
 				}
 				pan = std::max(-1.0f, std::min(1.0f, pan));
@@ -804,57 +816,120 @@ bool AudioOutput::mix(void *outbuff, unsigned int frameCount) {
 			recorder->addBuffer(nullptr, recbuff, static_cast< int >(frameCount));
 		}
 
-		// Simulated radio static effect. Subtle pink-noise wash mixed under live speech.
-		// Gated by intensity > 0 so the slider at 0 is a zero-cost no-op. Sits inside the
-		// !qlMix.isEmpty() branch, so the noise is heard only while someone is speaking.
+		// Simulated radio static effect. Subtle pink-noise wash mixed under live speech,
+		// routed through the same per-context panning that real speech receives. Gated by
+		// intensity > 0 so the slider at 0 is a zero-cost no-op. Sits inside the
+		// !qlMix.isEmpty() branch, so noise is heard only while someone is speaking.
 		// Recordings already received the un-noised per-source PCM via the addBuffer calls
 		// above, so saved recordings remain clean.
 		//
+		// Emission rules:
+		//   - 0 active contexts                                   -> 0 streams
+		//   - K active contexts collapsed to a single pan value   -> 1 stream
+		//   - K active contexts with K distinct pan values        -> K streams (max 3)
+		// Dedup is by exact float equality on the clamped pan values, which is safe here
+		// because pans come from the int-valued slider divided by 100. Iteration order
+		// voice -> whisper -> shout makes voice the canonical emitter when contexts share
+		// a pan, keeping that stream's generator state warm across whisper/shout coming
+		// and going.
+		//
 		// Voss-McCartney pink noise: 16 rows summed, exactly one row refreshed per sample
-		// using trailing-zero counter selection. Plus a per-sample white component for
-		// high-frequency variation. Produces ~1/f spectrum that resembles real voice-band
-		// radio hiss more closely than uniform white noise does.
+		// using trailing-zero counter selection, plus a per-sample white component for
+		// high-frequency variation. Each slot owns an independent generator state so two
+		// simultaneous streams produce decorrelated noise rather than a doubled copy.
 		const float radioStatic = std::max(0.0f, std::min(1.0f, Global::get().s.fRadioStaticIntensity));
 		if (radioStatic > 0.0f) {
 			// Pink-noise peak ~= ±1 with this normalization; gain matches the white-noise
 			// version's perceived ceiling. Tune this constant if pink ends up too quiet/loud.
-			const float gain                 = radioStatic * 0.2f;
-			static constexpr int kPinkRows   = 16;
-			static float pinkRows[kPinkRows] = { 0.0f };
-			static float pinkRunningSum      = 0.0f;
-			static uint32_t pinkCounter      = 0u;
-			static uint32_t xorshiftState    = 0xDEADBEEFu;
-			const unsigned int total         = frameCount * nchan;
-			for (unsigned int i = 0; i < total; ++i) {
-				// White step: per-sample variation that smooths out the row staircase.
-				xorshiftState ^= xorshiftState << 13;
-				xorshiftState ^= xorshiftState >> 17;
-				xorshiftState ^= xorshiftState << 5;
-				const float whiteStep =
-					(static_cast< float >(xorshiftState) / static_cast< float >(UINT32_MAX)) * 2.0f - 1.0f;
+			const float gain                         = radioStatic * 0.2f;
+			static constexpr int kSlots              = 3; // 0 = voice, 1 = whisper, 2 = shout
+			static constexpr int kPinkRows           = 16;
+			static float pinkRows[kSlots][kPinkRows] = {};
+			static float pinkRunningSum[kSlots]      = { 0.0f, 0.0f, 0.0f };
+			static uint32_t pinkCounter[kSlots]      = { 0u, 0u, 0u };
+			static uint32_t xorshiftState[kSlots]    = { 0xDEADBEEFu, 0xCAFEBABEu, 0xFEEDFACEu };
 
-				// Pick which row to refresh this sample by counting trailing zeros of the
-				// counter. Counts with ctz >= kPinkRows-1 all land on the last row, which
-				// is the standard Voss-McCartney bounded-row behavior.
-				++pinkCounter;
-				uint32_t v = pinkCounter;
-				int row    = 0;
-				while ((v & 1u) == 0u && row < kPinkRows - 1) {
-					v >>= 1;
-					++row;
+			const bool active[kSlots]      = { contextActiveVoice, contextActiveWhisper, contextActiveShout };
+			const float panPerSlot[kSlots] = {
+				std::max(-1.0f, std::min(1.0f, Global::get().s.fPanVoice)),
+				std::max(-1.0f, std::min(1.0f, Global::get().s.fPanWhisper)),
+				std::max(-1.0f, std::min(1.0f, Global::get().s.fPanShout)),
+			};
+
+			bool emitter[kSlots] = { false, false, false };
+			for (int i = 0; i < kSlots; ++i) {
+				if (!active[i]) {
+					continue;
+				}
+				bool duplicate = false;
+				for (int j = 0; j < i; ++j) {
+					if (active[j] && panPerSlot[j] == panPerSlot[i]) {
+						duplicate = true;
+						break;
+					}
+				}
+				if (!duplicate) {
+					emitter[i] = true;
+				}
+			}
+
+			for (int slot = 0; slot < kSlots; ++slot) {
+				if (!emitter[slot]) {
+					continue;
 				}
 
-				xorshiftState ^= xorshiftState << 13;
-				xorshiftState ^= xorshiftState >> 17;
-				xorshiftState ^= xorshiftState << 5;
-				const float newRowVal =
-					(static_cast< float >(xorshiftState) / static_cast< float >(UINT32_MAX)) * 2.0f - 1.0f;
+				// Equal-power pan factor distributed across the actual speaker layout,
+				// mirroring the per-speech panning math above so the static lands in the
+				// same ear(s) as the speech it accompanies. Pan == 0 keeps panFactor at
+				// 1.0 (no attenuation) to match the speech-panning behavior.
+				static std::vector< float > noisePanFactor;
+				noisePanFactor.assign(nchan, 1.0f);
+				const float pan = panPerSlot[slot];
+				if (pan != 0.0f) {
+					const float theta = (pan + 1.0f) * (static_cast< float >(M_PI) / 4.0f);
+					const float gainL = std::cos(theta);
+					const float gainR = std::sin(theta);
+					for (unsigned int s = 0; s < nchan; ++s) {
+						const float x         = fSpeakers[s * 3 + 0];
+						const float leftness  = (1.0f - x) * 0.5f;
+						const float rightness = (1.0f + x) * 0.5f;
+						noisePanFactor[s]     = gainL * leftness + gainR * rightness;
+					}
+				}
 
-				pinkRunningSum += newRowVal - pinkRows[row];
-				pinkRows[row] = newRowVal;
+				for (unsigned int i = 0; i < frameCount; ++i) {
+					// White step: per-sample variation that smooths out the row staircase.
+					xorshiftState[slot] ^= xorshiftState[slot] << 13;
+					xorshiftState[slot] ^= xorshiftState[slot] >> 17;
+					xorshiftState[slot] ^= xorshiftState[slot] << 5;
+					const float whiteStep =
+						(static_cast< float >(xorshiftState[slot]) / static_cast< float >(UINT32_MAX)) * 2.0f - 1.0f;
 
-				const float n = (pinkRunningSum + whiteStep) / static_cast< float >(kPinkRows + 1);
-				output[i] += n * gain;
+					// Pick which row to refresh this sample by counting trailing zeros of
+					// the counter. Counts with ctz >= kPinkRows-1 all land on the last row,
+					// which is the standard Voss-McCartney bounded-row behavior.
+					++pinkCounter[slot];
+					uint32_t v = pinkCounter[slot];
+					int row    = 0;
+					while ((v & 1u) == 0u && row < kPinkRows - 1) {
+						v >>= 1;
+						++row;
+					}
+
+					xorshiftState[slot] ^= xorshiftState[slot] << 13;
+					xorshiftState[slot] ^= xorshiftState[slot] >> 17;
+					xorshiftState[slot] ^= xorshiftState[slot] << 5;
+					const float newRowVal =
+						(static_cast< float >(xorshiftState[slot]) / static_cast< float >(UINT32_MAX)) * 2.0f - 1.0f;
+
+					pinkRunningSum[slot] += newRowVal - pinkRows[slot][row];
+					pinkRows[slot][row] = newRowVal;
+
+					const float n = (pinkRunningSum[slot] + whiteStep) / static_cast< float >(kPinkRows + 1);
+					for (unsigned int s = 0; s < nchan; ++s) {
+						output[i * nchan + s] += n * gain * noisePanFactor[s];
+					}
+				}
 			}
 		}
 	}
