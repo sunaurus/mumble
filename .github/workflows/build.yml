@@ -41,12 +41,7 @@ jobs:
             fetch-depth: 1
       - id: fetch
         shell: bash
-        run: |
-          build_version="$("${{ github.workspace }}/scripts/mumble-version.py")"
-          build_number="$("${{ github.workspace }}/scripts/mumble-build-number.py" \
-            --commit "${{ github.sha }}" --version "${build_version}" \
-            --password "${{ secrets.BUILD_NUMBER_TOKEN }}" --default 0)"
-          echo "build_number=${build_number}" >> "$GITHUB_OUTPUT"
+        run: echo "build_number=901" >> "$GITHUB_OUTPUT"
 
 
   build:

@@ -203,7 +203,9 @@ void VersionCheck::fetched(QByteArray a, QUrl url) {
 			}
 #else
 			Q_UNUSED(url);
-			Global::get().mw->msgBox(QString::fromUtf8(a));
+			Global::get().mw->msgBox(tr("REMINDER: You are using Sun's fork of Mumble, ask "
+										"him for an updated version if you want to keep the "
+										"custom features!"));
 #endif
 		}
 	} else {
