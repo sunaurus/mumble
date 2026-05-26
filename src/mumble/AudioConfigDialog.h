@@ -114,6 +114,8 @@ public slots:
 	void on_qpbPanVoiceReset_clicked();
 	void on_qpbPanWhisperReset_clicked();
 	void on_qpbPanShoutReset_clicked();
+
+	void on_qsRadioStatic_valueChanged(int v);
 };
 
 #endif

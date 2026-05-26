@@ -82,6 +82,9 @@ const SettingsKey PAN_WHISPER_KEY             = { "pan_whisper" };
 const SettingsKey PAN_SHOUT_KEY               = { "pan_shout" };
 const SettingsKey PANNING_DEFAULTS_SEEDED_KEY = { "panning_defaults_seeded" };
 
+// Audio output effects
+const SettingsKey RADIO_STATIC_INTENSITY_KEY = { "radio_static_intensity" };
+
 // Idle settings
 const SettingsKey IDLE_TIME_KEY                  = { "idle_time" };
 const SettingsKey IDLE_ACTION_KEY                = { "idle_action" };

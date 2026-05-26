@@ -74,6 +74,10 @@
 	PROCESS(panning, PANNING_DEFAULTS_SEEDED_KEY, bPanningDefaultsSeeded)
 
 
+#define EFFECTS_SETTINGS                                                    \
+	PROCESS(effects, RADIO_STATIC_INTENSITY_KEY, fRadioStaticIntensity)
+
+
 #define POSITIONAL_AUDIO_SETTINGS                                                  \
 	PROCESS(positional_audio, ENABLE_POSITIONAL_AUDIO_KEY, bPositionalAudio)       \
 	PROCESS(positional_audio, POSITIONAL_MIN_DISTANCE_KEY, fAudioMinDistance)      \
@@ -328,6 +332,7 @@
 	AUDIO_SETTINGS             \
 	IDLE_SETTINGS              \
 	PANNING_SETTINGS           \
+	EFFECTS_SETTINGS           \
 	POSITIONAL_AUDIO_SETTINGS  \
 	NETWORK_SETTINGS           \
 	AUDIO_BACKEND_SETTINGS     \
@@ -359,6 +364,8 @@
 	IDLE_SETTINGS                                        \
 	INTERMEDIATE_OPERATION                               \
 	PANNING_SETTINGS                                     \
+	INTERMEDIATE_OPERATION                               \
+	EFFECTS_SETTINGS                                     \
 	INTERMEDIATE_OPERATION                               \
 	POSITIONAL_AUDIO_SETTINGS                            \
 	INTERMEDIATE_OPERATION                               \

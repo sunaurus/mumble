@@ -747,6 +747,9 @@ void AudioOutputDialog::load(const Settings &r) {
 	on_qsPanWhisper_valueChanged(qsPanWhisper->value());
 	on_qsPanShout_valueChanged(qsPanShout->value());
 
+	loadSlider(qsRadioStatic, static_cast< int >(std::lround(r.fRadioStaticIntensity * 100.0f)));
+	on_qsRadioStatic_valueChanged(qsRadioStatic->value());
+
 	qsOtherVolume->setEnabled(r.bAttenuateOthersOnTalk || r.bAttenuateOthers);
 	qlOtherVolume->setEnabled(r.bAttenuateOthersOnTalk || r.bAttenuateOthers);
 	qcbAttenuateLoopbacks->setEnabled(r.bOnlyAttenuateSameOutput);
@@ -777,6 +780,8 @@ void AudioOutputDialog::save() const {
 	s.fPanVoice   = static_cast< float >(qsPanVoice->value()) / 100.0f;
 	s.fPanWhisper = static_cast< float >(qsPanWhisper->value()) / 100.0f;
 	s.fPanShout   = static_cast< float >(qsPanShout->value()) / 100.0f;
+
+	s.fRadioStaticIntensity = static_cast< float >(qsRadioStatic->value()) / 100.0f;
 
 
 	if (AudioOutputRegistrar::qmNew) {
@@ -991,4 +996,9 @@ void AudioOutputDialog::on_qpbPanWhisperReset_clicked() {
 
 void AudioOutputDialog::on_qpbPanShoutReset_clicked() {
 	qsPanShout->setValue(0);
+}
+
+void AudioOutputDialog::on_qsRadioStatic_valueChanged(int v) {
+	qlRadioStaticValue->setText(tr("%1 %").arg(v));
+	Mumble::Accessibility::setSliderSemanticValue(qsRadioStatic, Mumble::Accessibility::SliderMode::READ_PERCENT, "%");
 }

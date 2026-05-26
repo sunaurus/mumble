@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <cstdint>
 
 // Remember that we cannot use static member classes that are not pointers, as the constructor
 // for AudioOutputRegistrar() might be called before they are initialized, as the constructor
@@ -801,6 +802,60 @@ bool AudioOutput::mix(void *outbuff, unsigned int frameCount) {
 
 		if (recorder && recorder->isInMixDownMode()) {
 			recorder->addBuffer(nullptr, recbuff, static_cast< int >(frameCount));
+		}
+
+		// Simulated radio static effect. Subtle pink-noise wash mixed under live speech.
+		// Gated by intensity > 0 so the slider at 0 is a zero-cost no-op. Sits inside the
+		// !qlMix.isEmpty() branch, so the noise is heard only while someone is speaking.
+		// Recordings already received the un-noised per-source PCM via the addBuffer calls
+		// above, so saved recordings remain clean.
+		//
+		// Voss-McCartney pink noise: 16 rows summed, exactly one row refreshed per sample
+		// using trailing-zero counter selection. Plus a per-sample white component for
+		// high-frequency variation. Produces ~1/f spectrum that resembles real voice-band
+		// radio hiss more closely than uniform white noise does.
+		const float radioStatic = std::max(0.0f, std::min(1.0f, Global::get().s.fRadioStaticIntensity));
+		if (radioStatic > 0.0f) {
+			// Pink-noise peak ~= ±1 with this normalization; gain matches the white-noise
+			// version's perceived ceiling. Tune this constant if pink ends up too quiet/loud.
+			const float gain                 = radioStatic * 0.2f;
+			static constexpr int kPinkRows   = 16;
+			static float pinkRows[kPinkRows] = { 0.0f };
+			static float pinkRunningSum      = 0.0f;
+			static uint32_t pinkCounter      = 0u;
+			static uint32_t xorshiftState    = 0xDEADBEEFu;
+			const unsigned int total         = frameCount * nchan;
+			for (unsigned int i = 0; i < total; ++i) {
+				// White step: per-sample variation that smooths out the row staircase.
+				xorshiftState ^= xorshiftState << 13;
+				xorshiftState ^= xorshiftState >> 17;
+				xorshiftState ^= xorshiftState << 5;
+				const float whiteStep =
+					(static_cast< float >(xorshiftState) / static_cast< float >(UINT32_MAX)) * 2.0f - 1.0f;
+
+				// Pick which row to refresh this sample by counting trailing zeros of the
+				// counter. Counts with ctz >= kPinkRows-1 all land on the last row, which
+				// is the standard Voss-McCartney bounded-row behavior.
+				++pinkCounter;
+				uint32_t v = pinkCounter;
+				int row    = 0;
+				while ((v & 1u) == 0u && row < kPinkRows - 1) {
+					v >>= 1;
+					++row;
+				}
+
+				xorshiftState ^= xorshiftState << 13;
+				xorshiftState ^= xorshiftState >> 17;
+				xorshiftState ^= xorshiftState << 5;
+				const float newRowVal =
+					(static_cast< float >(xorshiftState) / static_cast< float >(UINT32_MAX)) * 2.0f - 1.0f;
+
+				pinkRunningSum += newRowVal - pinkRows[row];
+				pinkRows[row] = newRowVal;
+
+				const float n = (pinkRunningSum + whiteStep) / static_cast< float >(kPinkRows + 1);
+				output[i] += n * gain;
+			}
 		}
 	}
 

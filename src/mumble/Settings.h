@@ -350,6 +350,10 @@ struct Settings {
 	float fPanWhisper          = 0.0f;
 	float fPanShout            = 0.0f;
 	bool bPanningDefaultsSeeded = false;
+
+	// Simulated radio static effect. White-noise wash mixed under live speech.
+	// Range [0.0, 1.0]; 0.0 disables the effect entirely (zero cost in the mixer).
+	float fRadioStaticIntensity = 0.0f;
 	/// Contains the settings for each individual plugin. The key in this map is the Hex-represented SHA-1
 	/// hash of the plugin's UTF-8 encoded absolute file-path on the hard-drive.
 	QHash< QString, PluginSetting > qhPluginSettings = {};
